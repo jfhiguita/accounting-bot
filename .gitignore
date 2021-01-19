@@ -1,0 +1,6 @@
+accounting-bot
+.env
+__pycache__
+.cfg
+*bin/
+*lib/
