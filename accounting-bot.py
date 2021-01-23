@@ -5,6 +5,7 @@ pero las respuestas deben ser digitadas
 
 #libreria propia
 from settings import TOKEN
+from worker_gs import GsheetWorker
 
 
 #librerias externas
@@ -27,13 +28,14 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+gsconn = GsheetWorker()
 
 CHOOSING, TYPING_REPLY, TYPING_CHOICE = range(3)
 
 reply_keyboard = [
-    ['Fecha', 'Detalle'],
-    ['Cantidad', 'Medida'],
-    ['Valor', 'Entrega Factura'],
+    ['FECHA', 'DETALLE'],
+    ['CANTIDAD', 'MEDIDA'],
+    ['VALOR', 'ENTREGA FACTURA'],
     ['Listo'],
 ]
 
@@ -53,7 +55,7 @@ def start(update: Update, context: CallbackContext):
     name = update.message.from_user.username
     saludo = f"""
     Hola {name}! Soy un digitador automatico.
-    Escoja cada uno de los items y digite su valor
+Escoja cada uno de los items y digite su valor
     """
     update.message.reply_text(saludo, reply_markup=markup,)
 
@@ -63,7 +65,7 @@ def start(update: Update, context: CallbackContext):
 def regular_choice(update: Update, context: CallbackContext):
     choosen_answer = update.message.text
     context.user_data['choice'] = choosen_answer
-    notice = f'Tu elegiste {choosen_answer.lower()} Dime cual?'
+    notice = f'Tu elegiste {choosen_answer} Dime cual?'
     update.message.reply_text(notice)
 
     return TYPING_REPLY
@@ -75,9 +77,13 @@ def done(update: Update, context: CallbackContext):
     if 'choice' in user_data:
         del user_data['choice']
 
-    notice = f'Esta es la informacion a guardar:\n{(user_data)}\nBye!'
+    notice = f'Esta es la informacion a guardar:\n{data_sheet(user_data)}\nBye!'
     update.message.reply_text(notice)
-    #queda pendiente la funcion de guardar la info
+
+    #guardar la info
+    notify = gsconn.storage_register(user_data)
+    update.message.reply_text(notify)
+
 
     user_data.clear()
     return ConversationHandler.END
@@ -88,10 +94,10 @@ def received_information(update: Update, context: CallbackContext):
     typed_answer = update.message.text
     #typed_answer = update.message.date.strftime('%Y-%m-%d')
     category = user_data['choice']
-    user_data[category] = typed_answer
+    user_data[category] = typed_answer.upper()
     del user_data['choice']
 
-    notice = f'esto me has dicho:\n{data_sheet(user_data)}, Dime que mas?'
+    notice = f'esto me has dicho:\n{data_sheet(user_data)} Dime que mas?'
     update.message.reply_text(notice, reply_markup=markup)
     
     return CHOOSING
@@ -107,7 +113,7 @@ def main():
         states = {
             CHOOSING: [
                 MessageHandler(
-                    Filters.regex('^(Fecha|Detalle|Cantidad|Medida|Valor|Entrega Factura)$'), regular_choice
+                    Filters.regex('^(FECHA|DETALLE|CANTIDAD|MEDIDA|VALOR|ENTREGA FACTURA)$'), regular_choice
                 ),
             ],
             TYPING_REPLY: [

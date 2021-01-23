@@ -1,7 +1,8 @@
-import gspread, pandas
+import gspread, pandas as pd
 
 from settings import SPREAD_SHEET_KEY
 
+SHEET = "BALANCE"
 
 class GsheetWorker:
     def __init__(self):
@@ -14,6 +15,25 @@ class GsheetWorker:
 
         return sheet
 
+
+    def check_items(self):
+        sheet = self.open_sheet('BALANCE')
+        items = pd.DataFrame(sheet.get_all_records())
+
+        return items
+
+
+    def storage_register(self, user_data):
+        sheet = self.open_sheet(SHEET)
+        if user_data:
+            sheet.append_row([value for value in user_data.values()])
+            notify = "La informacion ha sido registrada!"
+        else:
+            notify = "No hay data para guardar."
+
+        return notify
+
+
 if __name__ == "__main__":
-    gsconn = GsheetWorker()
-    print(gsconn.open_sheet("BALANCE"))
+
+    print(GsheetWorker().check_items())
